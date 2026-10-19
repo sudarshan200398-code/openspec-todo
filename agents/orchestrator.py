@@ -69,7 +69,7 @@ class Orchestrator:
                 match_text = match_text.replace(absolute.group(1), "")
 
         priority = "high" if URGENT_WORDS.search(match_text) else None
-        match_text = re.sub(r",?\s*\b(?:it'?s\s+)?(?:urgent|asap|critical)\b", "", match_text, flags=re.I)
+        match_text = re.sub(r"\b(?:it'?s )?(?:urgent|asap|critical)\b", "", match_text, flags=re.I)
         for level in ("high", "low", "medium"):
             if re.search(rf"\b{level}\s+priority\b|\bpriority\s+{level}\b", match_text, flags=re.I):
                 priority = level
@@ -84,8 +84,8 @@ class Orchestrator:
 
         new_title = None
         existing_title = match_text
-        if action == "update" and re.search(r"\s+to\s+", match_text, flags=re.I):
-            existing_title, new_title = re.split(r"\s+to\s+", match_text, maxsplit=1, flags=re.I)
+        if action == "update" and re.search(r"\sto\s", match_text, flags=re.I):
+            existing_title, new_title = re.split(r"\sto\s", match_text, maxsplit=1, flags=re.I)
             existing_title = existing_title.strip()
             new_title = new_title.strip()
         candidates = [task for task in tasks if existing_title.casefold() and existing_title.casefold() in task["title"].casefold()]

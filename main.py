@@ -3,7 +3,7 @@ from datetime import date
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from agents.orchestrator import Orchestrator
@@ -85,10 +85,10 @@ def _require_task(task_id: str) -> dict:
     return task
 
 
-@app.get("/", response_class=HTMLResponse, include_in_schema=False)
-def home() -> HTMLResponse:
-    """Serve the single-page task interface."""
-    return HTMLResponse(INDEX_FILE.read_text(encoding="utf-8"))
+@app.get("/", include_in_schema=False)
+def home() -> FileResponse:
+    """Serve the static single-page task interface (no user input is rendered)."""
+    return FileResponse(INDEX_FILE, media_type="text/html")
 
 
 @app.get("/api/tasks")
