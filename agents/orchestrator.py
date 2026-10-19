@@ -13,6 +13,9 @@ from agents.task_agent import TaskAgent
 from tools.repository import TaskRepository
 
 
+URGENT_WORDS = re.compile(r"\b(?:urgent|urgently|asap|critical|important|high priority)\b", re.I)
+
+
 class Orchestrator:
     def __init__(
         self,
@@ -65,7 +68,8 @@ class Orchestrator:
                     return {"action": "unknown"}
                 match_text = match_text.replace(absolute.group(1), "")
 
-        priority = None
+        priority = "high" if URGENT_WORDS.search(match_text) else None
+        match_text = re.sub(r",?\s*\b(?:it'?s\s+)?(?:urgent|asap|critical)\b", "", match_text, flags=re.I)
         for level in ("high", "low", "medium"):
             if re.search(rf"\b{level}\s+priority\b|\bpriority\s+{level}\b", match_text, flags=re.I):
                 priority = level
@@ -109,6 +113,8 @@ class Orchestrator:
         action = intent.get("action", "unknown")
         if action in {"create", "update", "complete", "delete"}:
             payload = {key: value for key, value in intent.items() if key != "action"}
+            if action == "create" and payload.get("priority") in (None, "medium") and URGENT_WORDS.search(message):
+                payload["priority"] = "high"
             try:
                 return self.task_agent.execute(action, payload)
             except (ValueError, TypeError):
