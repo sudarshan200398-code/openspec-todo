@@ -2,3 +2,10 @@
 __pycache__/
 .pytest_cache/
 *.sqlite3
+# test coverage and SonarQube
+.coverage
+coverage.xml
+htmlcov/
+.scannerwork/
+%APPDATA%/
+node_modules/

@@ -55,3 +55,21 @@ def test_assistant_actions_and_task_mutation(tmp_path, monkeypatch) -> None:
 def test_assistant_rejects_empty_message(tmp_path, monkeypatch) -> None:
     client = client_for(tmp_path, monkeypatch)
     assert client.post("/api/assistant", json={"message": " "}).status_code == 422
+
+
+def test_unrecognized_text_offers_add_as_task_without_writing(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    client = client_for(tmp_path, monkeypatch)
+    result = client.post("/api/assistant", json={"message": "buy groceries on friday"}).json()
+    assert result["needs_clarification"] is True
+    assert result["can_add_as_task"] is True
+    assert result["task_changed"] is False
+    assert client.get("/api/tasks").json() == []
+
+
+def test_ambiguous_match_is_not_offered_as_new_task(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    client = client_for(tmp_path, monkeypatch)
+    result = client.post("/api/assistant", json={"message": "complete a task that does not exist"}).json()
+    assert result["needs_clarification"] is True
+    assert result["can_add_as_task"] is False

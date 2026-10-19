@@ -46,7 +46,7 @@ class Orchestrator:
         elif re.match(r"^(update|rename|change)\b", normalized):
             action = "update"
         if action is None:
-            return {"action": "unknown"}
+            return {"action": "unknown", "no_command": True}
 
         match_text = re.sub(r"^(add|create|new|remind me to|remember to|complete|finish|mark done|done with|delete|remove|update|rename|change)\s*", "", text, flags=re.I).strip()
         due_date = None
@@ -114,7 +114,7 @@ class Orchestrator:
             except (ValueError, TypeError):
                 fallback = self._fallback(message, tasks)
                 if fallback.get("action") != action or fallback == intent:
-                    return {"response": "I couldn’t safely interpret that request. Could you rephrase it?", "task_changed": False}
+                    return {"response": "I couldn’t safely interpret that request. Could you rephrase it?", "task_changed": False, "needs_clarification": True, "can_add_as_task": False}
                 payload = {key: value for key, value in fallback.items() if key != "action"}
                 return self.task_agent.execute(action, payload)
         if action == "suggest":
@@ -123,4 +123,16 @@ class Orchestrator:
             return self.planner_agent.prioritize()
         if action == "summary":
             return self.summary_agent.daily_summary()
-        return {"response": intent.get("response") or "I’m not sure what you’d like me to do. Could you rephrase?", "task_changed": False}
+        if intent.get("no_command"):
+            return {
+                "response": "I didn’t recognise a command. Start with add, complete, update or delete, ask for a summary or the next task, or add your text as a new task.",
+                "task_changed": False,
+                "needs_clarification": True,
+                "can_add_as_task": True,
+            }
+        return {
+            "response": intent.get("response") or "I’m not sure what you’d like me to do. Could you rephrase?",
+            "task_changed": False,
+            "needs_clarification": True,
+            "can_add_as_task": False,
+        }
