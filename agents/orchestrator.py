@@ -16,6 +16,14 @@ from tools.repository import TaskRepository
 URGENT_WORDS = re.compile(r"\b(?:urgent|urgently|asap|critical|important|high priority)\b", re.I)
 
 
+def _strip_trailing_preposition(text: str) -> str:
+    """Drop a dangling 'by', 'on' or 'for' left after removing a date."""
+    words = text.split()
+    if words and words[-1].lower() in {"by", "on", "for"}:
+        words = words[:-1]
+    return " ".join(words)
+
+
 class Orchestrator:
     def __init__(
         self,
@@ -75,7 +83,7 @@ class Orchestrator:
                 priority = level
                 match_text = re.sub(rf"\b{level}\s+priority\b|\bpriority\s+{level}\b", "", match_text, flags=re.I)
                 break
-        match_text = re.sub(r"\b(by|on|for)\s*$", "", match_text.strip(" ,.-"), flags=re.I).strip()
+        match_text = _strip_trailing_preposition(match_text.strip(" ,.-"))
 
         payload: dict[str, Any] = {"action": action}
         if action == "create":
@@ -84,10 +92,10 @@ class Orchestrator:
 
         new_title = None
         existing_title = match_text
-        if action == "update" and re.search(r"\sto\s", match_text, flags=re.I):
-            existing_title, new_title = re.split(r"\sto\s", match_text, maxsplit=1, flags=re.I)
-            existing_title = existing_title.strip()
-            new_title = new_title.strip()
+        split_at = match_text.lower().find(" to ")
+        if action == "update" and split_at != -1:
+            existing_title = match_text[:split_at].strip()
+            new_title = match_text[split_at + 4:].strip()
         candidates = [task for task in tasks if existing_title.casefold() and existing_title.casefold() in task["title"].casefold()]
         if len(candidates) != 1:
             return {"action": "unknown"}
